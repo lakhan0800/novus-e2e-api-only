@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { db, newId } from "../db.js";
+import { trackPendoEvent } from "../pendo.js";
 import type { SessionRequest } from "./auth.js";
 
 export const projectsRouter = Router();
@@ -20,6 +21,18 @@ projectsRouter.post("/", (req: SessionRequest, res) => {
   }
   const project = { id: newId(), accountId: req.accountId!, name: body.data.name, tasks: [] };
   db.projects.set(project.id, project);
+  const accountProjects = [...db.projects.values()].filter((p) => p.accountId === req.accountId);
+  trackPendoEvent({
+    event: "project_created",
+    visitorId: req.userId!,
+    accountId: req.accountId!,
+    properties: {
+      projectId: project.id,
+      accountProjectCount: accountProjects.length,
+      isFirstProject: accountProjects.length === 1,
+      plan: db.accounts.get(req.accountId!)?.plan,
+    },
+  });
   res.status(201).json({ id: project.id, name: project.name, taskCount: 0 });
 });
 
@@ -41,6 +54,18 @@ projectsRouter.post("/:projectId/tasks", (req: SessionRequest, res) => {
   }
   const task = { id: newId(), title: body.data.title, done: false };
   project.tasks.push(task);
+  trackPendoEvent({
+    event: "task_created",
+    visitorId: req.userId!,
+    accountId: req.accountId!,
+    properties: {
+      taskId: task.id,
+      projectId: project.id,
+      projectTaskCount: project.tasks.length,
+      projectOpenTaskCount: project.tasks.filter((t) => !t.done).length,
+      isFirstTaskInProject: project.tasks.length === 1,
+    },
+  });
   res.status(201).json(task);
 });
 
@@ -51,6 +76,25 @@ projectsRouter.post("/:projectId/tasks/:taskId/complete", (req: SessionRequest, 
     res.status(404).json({ error: "Task not found" });
     return;
   }
+  const wasDone = task.done;
   task.done = true;
+  // Completing an already-done task returns 200 again; only the first completion is tracked.
+  if (!wasDone) {
+    const completedTaskCount = project.tasks.filter((t) => t.done).length;
+    const totalTaskCount = project.tasks.length;
+    trackPendoEvent({
+      event: "task_completed",
+      visitorId: req.userId!,
+      accountId: req.accountId!,
+      properties: {
+        taskId: task.id,
+        projectId: project.id,
+        projectCompletedTaskCount: completedTaskCount,
+        projectTotalTaskCount: totalTaskCount,
+        projectCompletionPercent: Math.round((completedTaskCount / totalTaskCount) * 100),
+        allProjectTasksDone: completedTaskCount === totalTaskCount,
+      },
+    });
+  }
   res.json(task);
 });
