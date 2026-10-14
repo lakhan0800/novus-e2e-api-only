@@ -2,6 +2,7 @@ import { Router } from "express";
 import OpenAI from "openai";
 import { z } from "zod";
 import type { SessionRequest } from "./auth.js";
+import { pendoTrack } from "../pendo.js";
 
 export const assistantRouter = Router();
 
@@ -24,5 +25,14 @@ assistantRouter.post("/", async (req: SessionRequest, res) => {
       ...body.data.messages,
     ],
   });
-  res.json({ reply: completion.choices[0]?.message.content ?? "" });
+  const reply = completion.choices[0]?.message.content ?? "";
+  res.json({ reply });
+
+  // Pendo Track: user sent a message to the AI assistant
+  void pendoTrack("ai_assistant_message_sent", req.userId!, req.accountId!, {
+    message_count: body.data.messages.length,
+    conversation_length: body.data.messages.length,
+    model: "gpt-4o-mini",
+    reply_length: reply.length,
+  });
 });

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { db, newId } from "../db.js";
+import { pendoTrack } from "../pendo.js";
 import type { SessionRequest } from "./auth.js";
 
 export const projectsRouter = Router();
@@ -21,6 +22,12 @@ projectsRouter.post("/", (req: SessionRequest, res) => {
   const project = { id: newId(), accountId: req.accountId!, name: body.data.name, tasks: [] };
   db.projects.set(project.id, project);
   res.status(201).json({ id: project.id, name: project.name, taskCount: 0 });
+
+  // Pendo Track: new project created
+  void pendoTrack("project_created", req.userId!, req.accountId!, {
+    project_id: project.id,
+    project_name: project.name,
+  });
 });
 
 projectsRouter.get("/:projectId", (req: SessionRequest, res) => {
@@ -42,6 +49,15 @@ projectsRouter.post("/:projectId/tasks", (req: SessionRequest, res) => {
   const task = { id: newId(), title: body.data.title, done: false };
   project.tasks.push(task);
   res.status(201).json(task);
+
+  // Pendo Track: new task added to a project
+  void pendoTrack("task_created", req.userId!, req.accountId!, {
+    task_id: task.id,
+    task_title: task.title,
+    project_id: project.id,
+    project_name: project.name,
+    project_task_count: project.tasks.length,
+  });
 });
 
 projectsRouter.post("/:projectId/tasks/:taskId/complete", (req: SessionRequest, res) => {
@@ -53,4 +69,15 @@ projectsRouter.post("/:projectId/tasks/:taskId/complete", (req: SessionRequest, 
   }
   task.done = true;
   res.json(task);
+
+  // Pendo Track: task marked as complete
+  const completedCount = project.tasks.filter((t) => t.done).length;
+  void pendoTrack("task_completed", req.userId!, req.accountId!, {
+    task_id: task.id,
+    task_title: task.title,
+    project_id: project.id,
+    project_name: project.name,
+    project_total_tasks: project.tasks.length,
+    project_completed_tasks: completedCount,
+  });
 });
