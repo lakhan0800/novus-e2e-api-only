@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Taskly</title>
+  <script>
+(function(apiKey){
+    (function(p,e,n,d,o){var v,w,x,y,z;o=p[d]=p[d]||{};o._q=o._q||[];
+    v=['initialize','identify','updateOptions','pageLoad','track', 'trackAgent'];for(w=0,x=v.length;w<x;++w)(function(m){
+    o[m]=o[m]||function(){o._q[m===v[0]?'unshift':'push']([m].concat([].slice.call(arguments,0)));};})(v[w]);
+    y=e.createElement(n);y.async=!0;y.src='https://cdn.pendo-dev.pendo-dev.com/agent/static/'+apiKey+'/pendo.js';
+    z=e.getElementsByTagName(n)[0];z.parentNode.insertBefore(y,z);})(window,document,'script','pendo');
+})('82584acb-57fb-4d55-a03a-4f40e176ceee');
+  </script>
+  <script>
+    pendo.initialize({
+      visitor: {
+        id: ''
+      }
+    });
+  </script>
+</head>
+<body>
+  <h1>Taskly</h1>
+  <form id="login-form">
+    <label for="email">Email</label>
+    <input type="email" id="email" name="email" required>
+    <label for="password">Password</label>
+    <input type="password" id="password" name="password" required>
+    <button type="submit">Log in</button>
+  </form>
+  <script>
+    document.getElementById("login-form").addEventListener("submit", async function (e) {
+      e.preventDefault();
+      var email = document.getElementById("email").value;
+      var password = document.getElementById("password").value;
+
+      try {
+        var response = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: email, password: password })
+        });
+
+        if (!response.ok) throw new Error("Login failed");
+
+        var data = await response.json();
+        var user = data.user;
+        var account = data.account;
+
+        pendo.identify({
+          visitor: {
+            id: user.id,
+            email: user.email,
+            full_name: user.fullName,
+            role: user.role,
+            accountId: user.accountId,
+            createdAt: user.createdAt
+          },
+          account: {
+            id: account.id,
+            name: account.name,
+            plan: account.plan,
+            seats: account.seats
+          }
+        });
+      } catch (err) {
+        console.error("Login error:", err);
+      }
+    });
+  </script>
+</body>
+</html>

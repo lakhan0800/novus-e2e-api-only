@@ -20,6 +20,8 @@ app.use("/api/projects", requireSession, projectsRouter);
 app.use("/api/account", requireSession, accountRouter);
 app.use("/api/assistant", requireSession, assistantRouter);
 
+app.use(express.static("public"));
+
 const port = Number(process.env.PORT ?? 4000);
 app.listen(port, () => {
   console.log(`Taskly API listening on :${port}`);
