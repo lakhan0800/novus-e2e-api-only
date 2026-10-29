@@ -1,0 +1,45 @@
+/**
+ * Server-side Pendo Agent Analytics events, mirroring the browser
+ * `pendo.trackAgent(eventType, metadata)` API. The `pendo` agent global does not exist in Node,
+ * so events are sent to the Pendo track endpoint.
+ */
+
+export const TASKLY_ASSISTANT_AGENT_ID = "muuy5ZRLLL6kb9baxSLiU4OtCPo";
+
+export type AgentEventType = "prompt" | "agent_response" | "user_reaction";
+
+export interface AgentEventMetadata {
+  agentId: string;
+  conversationId: string;
+  messageId: string;
+  content: string;
+  modelUsed?: string;
+  suggestedPrompt?: boolean;
+  toolsUsed?: string[];
+  fileUploaded?: boolean;
+}
+
+const trackEndpoint = process.env.PENDO_TRACK_ENDPOINT ?? "https://app.pendo.io/data/track";
+const trackKey = process.env.PENDO_TRACK_KEY;
+
+export function trackAgent(
+  eventType: AgentEventType,
+  metadata: AgentEventMetadata,
+  visitorId: string,
+  accountId?: string
+): void {
+  if (!trackKey) return;
+  const body = {
+    type: "track",
+    event: eventType,
+    visitorId,
+    accountId,
+    properties: metadata,
+    timestamp: Date.now(),
+  };
+  void fetch(`${trackEndpoint}?apikey=${trackKey}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  }).catch(() => undefined);
+}
