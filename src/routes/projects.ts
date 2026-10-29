@@ -53,6 +53,18 @@ projectsRouter.post("/:projectId/tasks", (req: SessionRequest, res) => {
   }
   const task = { id: newId(), title: body.data.title, done: false };
   project.tasks.push(task);
+  // Task validated and added to the project (Object Analytics, keyed by projectId/taskId).
+  trackProjectObjectEvent(
+    "task_created",
+    {
+      projectId: project.id,
+      accountId: project.accountId,
+      taskId: task.id,
+      status: project.status,
+      taskCount: project.tasks.length,
+    },
+    req.userId!
+  );
   res.status(201).json(task);
 });
 
