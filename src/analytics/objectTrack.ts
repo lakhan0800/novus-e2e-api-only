@@ -7,6 +7,7 @@ export interface ProjectEventProperties {
   accountId: string;
   taskId?: string;
   status?: ProjectStatus;
+  projectTaskCount?: number;
 }
 
 const trackEndpoint = process.env.PENDO_TRACK_ENDPOINT ?? "https://app.pendo.io/data/track";
@@ -27,6 +28,7 @@ export function trackProjectObjectEvent(
       projectId: properties.projectId,
       taskId: properties.taskId,
       projectStatus: properties.status,
+      projectTaskCount: properties.projectTaskCount,
     },
     timestamp: Date.now(),
   };

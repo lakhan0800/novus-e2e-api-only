@@ -53,6 +53,18 @@ projectsRouter.post("/:projectId/tasks", (req: SessionRequest, res) => {
   }
   const task = { id: newId(), title: body.data.title, done: false };
   project.tasks.push(task);
+  // Track that a task was saved, keyed by project/task ids for Object Analytics.
+  trackProjectObjectEvent(
+    "task_created",
+    {
+      projectId: project.id,
+      accountId: project.accountId,
+      taskId: task.id,
+      status: project.status,
+      projectTaskCount: project.tasks.length,
+    },
+    req.userId!
+  );
   res.status(201).json(task);
 });
 
