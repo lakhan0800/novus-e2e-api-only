@@ -1,6 +1,7 @@
 import { Router } from "express";
 import OpenAI from "openai";
 import { z } from "zod";
+import { trackServerEvent } from "../analytics/track.js";
 import type { SessionRequest } from "./auth.js";
 
 export const assistantRouter = Router();
@@ -24,5 +25,17 @@ assistantRouter.post("/", async (req: SessionRequest, res) => {
       ...body.data.messages,
     ],
   });
-  res.json({ reply: completion.choices[0]?.message.content ?? "" });
+  const reply = completion.choices[0]?.message.content ?? "";
+  // Message and reply content are deliberately not sent to Pendo.
+  trackServerEvent(
+    "assistant_response_generated",
+    { visitorId: req.userId!, accountId: req.accountId! },
+    {
+      messageCount: body.data.messages.length,
+      model: completion.model,
+      replyLength: reply.length,
+      success: reply.length > 0,
+    }
+  );
+  res.json({ reply });
 });
