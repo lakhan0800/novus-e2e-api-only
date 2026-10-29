@@ -1,6 +1,7 @@
 import { Router } from "express";
 import OpenAI from "openai";
 import { z } from "zod";
+import { trackServerEvent } from "../analytics/objectTrack.js";
 import type { SessionRequest } from "./auth.js";
 
 export const assistantRouter = Router();
@@ -24,5 +25,15 @@ assistantRouter.post("/", async (req: SessionRequest, res) => {
       ...body.data.messages,
     ],
   });
-  res.json({ reply: completion.choices[0]?.message.content ?? "" });
+  const reply = completion.choices[0]?.message.content ?? "";
+  // Successful assistant response. Message content may contain PII and is intentionally not sent.
+  trackServerEvent("assistant_response_generated", req.userId!, req.accountId!, {
+    model: completion.model,
+    messageCount: body.data.messages.length,
+    replyLength: reply.length,
+    finishReason: completion.choices[0]?.finish_reason ?? undefined,
+    promptTokens: completion.usage?.prompt_tokens,
+    completionTokens: completion.usage?.completion_tokens,
+  });
+  res.json({ reply });
 });
