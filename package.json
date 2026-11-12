@@ -13,6 +13,7 @@
     "cookie-parser": "^1.4.7",
     "express": "^4.21.2",
     "openai": "^4.77.0",
+    "pendo-server-sdk": ">=0.11.0 <3",
     "zod": "^3.24.1"
   },
   "devDependencies": {
